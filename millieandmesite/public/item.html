@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book | Millie & Me</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="site">
+  <div class="wrap row">
+    <a class="logo" href="/">millie <span>&amp;</span> me</a>
+    <a class="tag" href="/">&larr; All gear</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="content" class="item-layout">Loading...</div>
+</div>
+
+<footer class="site">&copy; 2026 Millie &amp; Me, a family collective LLC</footer>
+
+<script src="/app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const itemId = params.get('id');
+let item = null;
+let bookedRanges = [];
+let quantity = 1;
+let currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let selectedStart = null;
+let selectedTier = null;
+
+function overlapCount(start, end) {
+  return bookedRanges.filter(r => rangesOverlap(start, end, r.start_date, r.end_date)).length;
+}
+
+function renderCalendar() {
+  const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+  const first = new Date(y, m, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const todayIso = toISODate(new Date());
+  const monthLabel = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  let cells = '';
+  for (let i = 0; i < startWeekday; i++) cells += `<div class="day empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = toISODate(new Date(y, m, d));
+    const isPast = dateStr < todayIso;
+    const isBooked = overlapCount(dateStr, dateStr) >= quantity;
+    const isSelected = dateStr === selectedStart;
+    const cls = ['day'];
+    if (isPast || isBooked) cls.push(isBooked ? 'booked' : 'disabled');
+    if (isSelected) cls.push('selected');
+    cells += `<div class="${cls.join(' ')}" data-date="${dateStr}" ${isPast || isBooked ? '' : 'onclick="pickStart(\'' + dateStr + '\')"'}>${d}</div>`;
+  }
+
+  document.getElementById('calendar').innerHTML = `
+    <div class="cal-head">
+      <button onclick="shiftMonth(-1)">&larr;</button>
+      <strong>${monthLabel}</strong>
+      <button onclick="shiftMonth(1)">&rarr;</button>
+    </div>
+    <div class="cal-grid">
+      <div class="dow">Su</div><div class="dow">Mo</div><div class="dow">Tu</div><div class="dow">We</div>
+      <div class="dow">Th</div><div class="dow">Fr</div><div class="dow">Sa</div>
+      ${cells}
+    </div>
+    <p class="note">Grey = past date &middot; orange = already booked &middot; click an open date to start</p>
+  `;
+}
+
+function shiftMonth(delta) {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1);
+  renderCalendar();
+}
+
+function pickStart(dateStr) {
+  selectedStart = dateStr;
+  selectedTier = null;
+  renderCalendar();
+  renderTiers();
+}
+
+function renderTiers() {
+  const box = document.getElementById('tiers');
+  const form = document.getElementById('bookingForm');
+  if (!selectedStart) { box.innerHTML = ''; form.style.display = 'none'; return; }
+
+  box.innerHTML = `<h4 style="margin-bottom:10px;">Choose rental length</h4>` + item.pricing_tiers.map((t, idx) => {
+    const end = addDays(selectedStart, t.days - 1);
+    const available = overlapCount(selectedStart, end) < quantity;
+    const active = selectedTier && selectedTier.label === t.label;
+    return `
+      <div class="tier ${active ? 'active' : ''} ${available ? '' : 'unavailable'}"
+           onclick="${available ? `selectTier(${idx})` : ''}">
+        <div>
+          <div class="label">${t.label}</div>
+          <div class="dates">${selectedStart} &rarr; ${end}${available ? '' : ' (unavailable)'}</div>
+        </div>
+        <div class="price">${fmtMoney(t.price_cents)}</div>
+      </div>`;
+  }).join('');
+
+  form.style.display = selectedTier ? 'grid' : 'none';
+}
+
+function selectTier(idx) {
+  selectedTier = item.pricing_tiers[idx];
+  renderTiers();
+  document.getElementById('bookingForm').style.display = 'grid';
+}
+
+async function submitBooking(ev) {
+  ev.preventDefault();
+  const errorBox = document.getElementById('formError');
+  errorBox.textContent = '';
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Redirecting to payment...';
+
+  try {
+    const endDate = addDays(selectedStart, selectedTier.days - 1);
+    const res = await apiPost('/api/create-checkout', {
+      itemId,
+      startDate: selectedStart,
+      endDate,
+      tierLabel: selectedTier.label,
+      customerName: document.getElementById('name').value,
+      customerEmail: document.getElementById('email').value,
+      customerPhone: document.getElementById('phone').value,
+    });
+    window.location = res.url;
+  } catch (err) {
+    errorBox.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Continue to payment';
+  }
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const [items, avail] = await Promise.all([
+      apiGet('/api/items'),
+      apiGet('/api/availability?itemId=' + encodeURIComponent(itemId)),
+    ]);
+    item = items.find(i => i.id === itemId);
+    if (!item) { content.innerHTML = '<p class="error">Item not found.</p>'; return; }
+    bookedRanges = avail.bookedRanges;
+    quantity = avail.quantity;
+
+    content.innerHTML = `
+      <div class="item-image"><img src="${item.image_url || ''}" alt="${item.name}"></div>
+      <div class="item-info">
+        <h1>${item.name}</h1>
+        <p class="desc">${item.description || ''}</p>
+        <div id="calendar" class="calendar"></div>
+        <div id="tiers" class="tiers"></div>
+        <form id="bookingForm" class="booking-form" style="display:none" onsubmit="submitBooking(event)">
+          <div><label for="name">Full name</label><input id="name" required></div>
+          <div><label for="email">Email</label><input id="email" type="email" required></div>
+          <div><label for="phone">Phone (optional)</label><input id="phone"></div>
+          <button id="submitBtn" class="btn btn-primary" type="submit">Continue to payment</button>
+          <div id="formError" class="error"></div>
+        </form>
+      </div>
+    `;
+    renderCalendar();
+  } catch (err) {
+    content.innerHTML = `<p class="error">Couldn't load this item: ${err.message}</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

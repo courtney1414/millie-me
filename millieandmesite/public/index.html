@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Millie & Me — Baby Gear Rentals</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="site">
+  <div class="wrap row">
+    <div class="logo">millie <span>&amp;</span> me</div>
+    <div class="tag">a family collective</div>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <h1>Baby gear, ready when you need it.</h1>
+  <p>Browse what's available and book real dates &mdash; no back-and-forth, no guessing whether it's free. Pick your item, pick your dates, and check out securely.</p>
+</section>
+
+<div class="wrap">
+  <div id="grid" class="grid">Loading gear...</div>
+</div>
+
+<footer class="site">&copy; 2026 Millie &amp; Me, a family collective LLC</footer>
+
+<script src="/app.js"></script>
+<script>
+async function load() {
+  const grid = document.getElementById('grid');
+  try {
+    const items = await apiGet('/api/items');
+    if (!items.length) {
+      grid.innerHTML = '<p>No gear listed yet — check back soon.</p>';
+      return;
+    }
+    grid.innerHTML = items.map(item => {
+      const minPrice = Math.min(...item.pricing_tiers.map(t => t.price_cents));
+      return `
+        <a class="card" href="/item.html?id=${encodeURIComponent(item.id)}">
+          <img src="${item.image_url || ''}" alt="${item.name}" loading="lazy">
+          <div class="body">
+            <h3>${item.name}</h3>
+            <div class="from">Starting at</div>
+            <div class="price">${fmtMoney(minPrice)}</div>
+          </div>
+        </a>`;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = `<p class="error">Couldn't load gear: ${err.message}</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

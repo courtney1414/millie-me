@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin | Millie & Me</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="site">
+  <div class="wrap row">
+    <a class="logo" href="/">millie <span>&amp;</span> me</a>
+    <div class="tag">Admin</div>
+  </div>
+</header>
+
+<div class="wrap" id="app">
+  <div class="admin-gate" id="gate">
+    <h2>Admin sign-in</h2>
+    <input id="pw" type="password" placeholder="Admin password">
+    <button class="btn btn-primary" onclick="signIn()">Sign in</button>
+    <p class="error" id="gateError"></p>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let adminPassword = null; // kept in memory only, never persisted
+
+async function signIn() {
+  adminPassword = document.getElementById('pw').value;
+  await loadBookings();
+}
+
+async function apiGetAuth(path) {
+  const res = await fetch(path, { headers: { 'x-admin-password': adminPassword } });
+  if (!res.ok) throw new Error('Wrong password or server error (' + res.status + ')');
+  return res.json();
+}
+
+async function loadBookings() {
+  const app = document.getElementById('app');
+  try {
+    const bookings = await apiGetAuth('/api/admin-bookings');
+    app.innerHTML = renderDashboard(bookings);
+  } catch (err) {
+    document.getElementById('gateError').textContent = err.message;
+  }
+}
+
+function renderDashboard(bookings) {
+  const rows = bookings.map(b => `
+    <tr>
+      <td>${b.item_name}</td>
+      <td>${b.start_date} &rarr; ${b.end_date}</td>
+      <td>${b.tier_label}</td>
+      <td>${fmtMoney(b.price_cents)}</td>
+      <td>${b.customer_name}<br><span class="tag">${b.customer_email}</span></td>
+      <td><span class="status-pill status-${b.status}">${b.status}</span></td>
+      <td>${b.status !== 'cancelled' ? `<button class="btn btn-ghost" onclick="cancelBooking('${b.id}')">Cancel</button>` : ''}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <h2 style="margin:24px 0 16px;">Bookings</h2>
+    <table class="bookings">
+      <thead><tr><th>Item</th><th>Dates</th><th>Tier</th><th>Price</th><th>Customer</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7">No bookings yet.</td></tr>'}</tbody>
+    </table>
+
+    <h2 style="margin:36px 0 16px;">Block dates (maintenance / offline booking)</h2>
+    <form class="booking-form" style="max-width:420px" onsubmit="blockDates(event)">
+      <div><label>Item ID (slug)</label><input id="blockItemId" required placeholder="e.g. doona-infant-car-seat-latch-base-rental"></div>
+      <div><label>Start date</label><input id="blockStart" type="date" required></div>
+      <div><label>End date</label><input id="blockEnd" type="date" required></div>
+      <div><label>Note</label><input id="blockNote" placeholder="Optional"></div>
+      <button class="btn btn-primary" type="submit">Block dates</button>
+      <div id="blockError" class="error"></div>
+    </form>
+  `;
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Cancel this booking?')) return;
+  await fetch('/api/admin-bookings?id=' + id, { method: 'DELETE', headers: { 'x-admin-password': adminPassword } });
+  await loadBookings();
+}
+
+async function blockDates(ev) {
+  ev.preventDefault();
+  const errorBox = document.getElementById('blockError');
+  try {
+    const res = await fetch('/api/admin-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+      body: JSON.stringify({
+        itemId: document.getElementById('blockItemId').value,
+        startDate: document.getElementById('blockStart').value,
+        endDate: document.getElementById('blockEnd').value,
+        note: document.getElementById('blockNote').value,
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed to block dates');
+    await loadBookings();
+  } catch (err) {
+    errorBox.textContent = err.message;
+  }
+}
+</script>
+</body>
+</html>

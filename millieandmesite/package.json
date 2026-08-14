@@ -1,0 +1,10 @@
+{
+  "name": "millie-and-me-booking",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Custom rental booking + checkout site for Millie & Me, replacing Shopify's rental flow.",
+  "dependencies": {
+    "pg": "^8.11.5",
+    "stripe": "^16.0.0"
+  }
+}
