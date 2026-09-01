@@ -1,0 +1,12 @@
+<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .ring { fill: #EFE3C8; stroke: #7A3B2E; stroke-width: 4; }
+      .line { fill: none; stroke: #7A3B2E; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <circle class="ring" cx="110" cy="110" r="95"/>
+  <path class="line" d="M95 70 L70 95 L85 110 L60 135 L75 150 L100 125 L115 140 L140 115 Z"/>
+  <circle class="line" cx="127" cy="103" r="6"/>
+  <path class="line" d="M135 60 L150 75 M142 52 L157 67"/>
+</svg>
