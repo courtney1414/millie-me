@@ -10,52 +10,37 @@
 <header class="site">
   <div class="wrap row">
     <div class="logo">millie <span>&amp;</span> me</div>
+    <nav class="site-nav">
+      <a href="/rentals.html">Rentals</a>
+    </nav>
     <div class="tag">a family collective</div>
   </div>
 </header>
 
 <section class="hero wrap">
-  <h1>Baby gear, ready when you need it. A slower kind of shopping, too.</h1>
-  <p>Rent quality baby gear for real dates — no back-and-forth, no guessing whether it's free. Pick your item, pick your dates, and check out securely. And when you're out and about, find us in a fully restored 1974 Apache camper, pouring coffee slow and trading secondhand books and cards face-to-face.</p>
+  <h1>Some things are better handed down.</h1>
+  <p>Millie & Me started as one simple idea: the things our kids need shouldn't cost the earth, or end up in it after six months of use. What began as baby gear you rent instead of buy has grown into something bigger — a small family collective built one idea at a time, with our daughter Millie as the reason why.</p>
 </section>
 
-<div class="wrap">
-  <div id="grid" class="grid">Loading gear...</div>
-</div>
-
-<section class="wrap slow-shopping">
-  <h2>A slower kind of shopping</h2>
-  <p>Our newest project takes the same idea somewhere new: a mobile shop built inside a fully restored 1974 Apache camper. Think coffee poured slow, secondhand books with someone else's story still in the margins, and cards worth trading face-to-face. It's the same belief that built Millie &amp; Me — less stuff, more moments — just wearing a different hat.</p>
+<section class="wrap offerings">
+  <div class="offering">
+    <h2>A shelf of secondhand books</h2>
+    <p>Worth losing an afternoon to — each one carrying someone else's story in the margins.</p>
+  </div>
+  <div class="offering">
+    <h2>Cards worth trading</h2>
+    <p>A folding table, a shared love of the trade, and conversation that happens face-to-face.</p>
+  </div>
+  <div class="offering">
+    <h2>Coffee, poured slow</h2>
+    <p>Out of a fully restored 1974 Apache camper — because some things are still better in person.</p>
+  </div>
+  <div class="offering">
+    <h2>Baby gear, ready when you need it</h2>
+    <p>Rent instead of buying outright, so the essentials meet you exactly where your family is, then move on when you're ready. <a href="/rentals.html">Browse rentals &rarr;</a></p>
+  </div>
 </section>
 
 <footer class="site">&copy; 2026 Millie &amp; Me, a family collective LLC</footer>
-<script src="/app.js"></script>
-<script>
-async function load() {
-  const grid = document.getElementById('grid');
-  try {
-    const items = await apiGet('/api/items');
-    if (!items.length) {
-      grid.innerHTML = '<p>No gear listed yet — check back soon.</p>';
-      return;
-    }
-    grid.innerHTML = items.map(item => {
-      const minPrice = Math.min(...item.pricing_tiers.map(t => t.price_cents));
-      return `
-        <a class="card" href="/item.html?id=${encodeURIComponent(item.id)}">
-          <img src="${item.image_url || ''}" alt="${item.name}" loading="lazy">
-          <div class="body">
-            <h3>${item.name}</h3>
-            <div class="from">Starting at</div>
-            <div class="price">${fmtMoney(minPrice)}</div>
-          </div>
-        </a>`;
-    }).join('');
-  } catch (err) {
-    grid.innerHTML = `<p class="error">Couldn't load gear: ${err.message}</p>`;
-  }
-}
-load();
-</script>
 </body>
 </html>
