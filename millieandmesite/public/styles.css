@@ -103,3 +103,24 @@ table.bookings th, table.bookings td{border-bottom:1px solid var(--line);padding
 .status-confirmed{background:#dcecdc;color:#2f5c34;}
 .status-cancelled{background:#eee;color:#888;}
 .status-blocked{background:#e4dcf3;color:#5c4b8a;}
+
+.offerings{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:32px;
+  padding:16px 0 64px;
+}
+.offering{
+  text-align:center;
+}
+.offering-icon{
+  width:80px;
+  height:80px;
+  margin:0 auto 16px;
+  display:block;
+}
+.offering h2{
+  font-size:17px;
+  font-weight:600;
+  line-height:1.4;
+}
